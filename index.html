@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Firebase Web Application CRUD with Image</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+  <!-- Modal -->
+ <div class="modal fade" id="customerModal" tabindex="-1" role="dialog" aria-labelledby="customerModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <form id="model-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customerModalLabel">Customer Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">            
+          <input type="hidden" class="form-control" id="modal-customer_id">
+          <div class="form-group">
+            <label for="modal-name">Name</label>
+            <input type="text" class="form-control" id="modal-name" required>
+          </div>
+          <div class="form-group">
+            <label for="modal-address">Address</label>
+            <input type="text" class="form-control" id="modal-address" required>
+          </div>
+          <div class="form-group">
+            <label for="modal-city">City</label>
+            <input type="text" class="form-control" id="modal-city" required>
+          </div>
+          <div class="form-group">
+            <label for="modal-pinCode">Pin Code</label>
+            <input type="text" class="form-control" id="modal-pinCode" required>
+          </div>
+          <div class="form-group">
+            <label for="modal-country">Country</label>
+            <input type="text" class="form-control" id="modal-country" required>
+          </div>
+          <div class="form-group">
+            <label for="modal-image">Image (JPEG, PNG, GIF)</label>
+            <input type="file" class="form-control" id="modal-image" accept="image/jpeg, image/png, image/gif" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" onclick="submitFunction()" class="btn btn-primary">Submit</button>
+        </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- / Modal -->
+
+
+  <div class="container-xl">
+    <h2 style="text-align:center; margin-top:50px; margin-bottom:20px;">Firebase Web Application CRUD with Image</h2>
+    <a href="#customerModal" style="float:right; margin-bottom:20px;" class="btn btn-info" data-toggle="modal"><i class="fa fa-plus"></i> Add New</a>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>Pin Code</th>
+          <th>Country</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "*********************",
+      authDomain: "codehafeez-web.firebaseapp.com",
+      databaseURL: "https://codehafeez-web.firebaseio.com",
+      projectId: "codehafeez-web",
+      storageBucket: "codehafeez-web.appspot.com",
+      messagingSenderId: "967589938620",
+    };
+    firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+
+
+    // Function to read customers from the database
+    function readCustomers() {
+      database.ref('customers').on('value', function (snapshot) {
+        var tableBody = document.querySelector('table tbody');
+        tableBody.innerHTML = '';
+        snapshot.forEach(function (childSnapshot) {
+          var customer = childSnapshot.val();
+
+          // Get the image URL from Firebase Storage
+          firebase.storage().ref("customers").child(childSnapshot.key + "/image.png").getDownloadURL().then(function (imageUrl) {
+            var row = '<tr>' +
+              '<td><img src="' + imageUrl + '" alt="Customer Image" style="max-width: 100px;"></td>' +
+              '<td>' + customer.name + '</td>' +
+              '<td>' + customer.address + '</td>' +
+              '<td>' + customer.city + '</td>' +
+              '<td>' + customer.pinCode + '</td>' +
+              '<td>' + customer.country + '</td>' +
+              '<td>' +
+              '<a href="#" class="edit" onclick="showCustomerModal(\'' + childSnapshot.key + '\')"><i class="material-icons">&#xE254;</i></a>' +
+              '<a href="#" class="delete" onclick="deleteFunction(\'' + childSnapshot.key + '\')"><i class="material-icons">&#xE872;</i></a>' +
+              '</td>' +
+              '</tr>';
+            tableBody.innerHTML += row;
+          });
+        });
+      });
+    }
+
+
+    function deleteFunction(customer_id) {
+      var isConfirmed = confirm('Are you sure you want to delete?');
+      if (isConfirmed) {
+        database.ref('customers/' + customer_id).remove();
+      }
+    }
+
+
+    function showCustomerModal(customerId) {
+      var customerRef = database.ref('customers/' + customerId);
+      customerRef.once('value').then(function(snapshot) {
+        var customer = snapshot.val();
+        document.getElementById('modal-customer_id').value = customerId;
+        document.getElementById('modal-name').value = customer.name;
+        document.getElementById('modal-address').value = customer.address;
+        document.getElementById('modal-city').value = customer.city;
+        document.getElementById('modal-pinCode').value = customer.pinCode;
+        document.getElementById('modal-country').value = customer.country;
+        $('#customerModal').modal('show'); // Show the modal
+      });
+    }
+
+   function submitFunction() {
+      var customerId = document.getElementById('modal-customer_id').value;
+      var name = document.getElementById('modal-name').value;
+      var address = document.getElementById('modal-address').value;
+      var city = document.getElementById('modal-city').value;
+      var pinCode = document.getElementById('modal-pinCode').value;
+      var country = document.getElementById('modal-country').value;
+
+        // Check if the form is valid
+        var form = document.getElementById('model-form');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+      // Update the customer data in Firebase
+      if(customerId !== ''){
+        var customerRef = database.ref('customers/' + customerId);
+        customerRef.update({
+          name: name,
+          address: address,
+          city: city,
+          pinCode: pinCode,
+          country: country
+        });
+      }
+      else {
+        // Function to add a new customer
+        var newCustomerRef = database.ref('customers').push(); // Generates a new unique key
+        var customerKey = newCustomerRef.key; // Get the unique key
+        newCustomerRef.set({
+          name: name,
+          address: address,
+          city: city,
+          pinCode: pinCode,
+          country: country
+        });        
+
+        // upload image
+        var imageFile = document.getElementById('modal-image').files[0];
+        firebase.storage().ref("customers").child(customerKey+"/image.png").put(imageFile);
+      }
+
+      $('#customerModal').modal('hide'); // Hide the modal after update          
+      form.reset(); // Reset the form data after submission
+    }
+
+
+    readCustomers();
+  </script>
+</body>
+</html>
